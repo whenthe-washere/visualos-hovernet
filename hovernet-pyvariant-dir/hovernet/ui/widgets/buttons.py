@@ -157,6 +157,7 @@ class TitleBarButton(QPushButton):
         self.setFixedSize(36, 26)
         self._is_maximized = False # Only used for 'max' type
         self.setStyleSheet("background: transparent; border: none;") # Reset base style
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         
     def set_maximized(self, is_max):
         self._is_maximized = is_max
@@ -167,38 +168,26 @@ class TitleBarButton(QPushButton):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         is_hover = self.underMouse()
-        is_pressed = self.isDown()
-        
-        # Background
-        if is_hover:
-            bg_color = QColor(255, 50, 50) if self.btn_type == 'close' else QColor(255, 255, 255, 30)
-            if is_pressed:
-                bg_color = QColor(200, 40, 40) if self.btn_type == 'close' else QColor(255, 255, 255, 50)
-            painter.setBrush(bg_color)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawRect(self.rect())
-            
-        # Icon
-        pen_color = QColor(255, 255, 255)
-        painter.setPen(QPen(pen_color, 1, Qt.PenStyle.SolidLine, Qt.PenCapStyle.FlatCap, Qt.PenJoinStyle.MiterJoin))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-        
-        cx, cy = 18, 13
         
         if self.btn_type == 'min':
-            painter.drawLine(cx - 5, cy, cx + 5, cy)
+            base_color = QColor("#EAB308")
         elif self.btn_type == 'max':
-            if not self._is_maximized:
-                # Square
-                painter.drawRect(cx - 5, cy - 5, 10, 10)
-            else:
-                # Overlapping squares (Restore)
-                painter.drawRect(cx - 3, cy - 5, 8, 8)
-                # Draw a small background-colored square to mask the intersection
-                painter.setBrush(QColor(30, 30, 60)) 
-                painter.drawRect(cx - 5, cy - 3, 8, 8)
-                painter.setBrush(Qt.BrushStyle.NoBrush)
-                painter.drawRect(cx - 5, cy - 3, 8, 8)
-        elif self.btn_type == 'close':
-            painter.drawLine(cx - 5, cy - 5, cx + 5, cy + 5)
-            painter.drawLine(cx - 5, cy + 5, cx + 5, cy - 5)
+            base_color = QColor("#22C55E")
+        else:
+            base_color = QColor("#EF4444")
+            
+        if is_hover:
+            base_color.setAlphaF(1.0)
+            w, h, r = 24, 3, 1.5
+        else:
+            # Less saturated + half transparent
+            hue, sat, val, _ = base_color.getHsv()
+            base_color.setHsv(hue, max(0, sat - 100), val)
+            base_color.setAlphaF(0.7)
+            w, h, r = 18, 2, 1.0
+            
+        painter.setBrush(base_color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        
+        cx, cy = self.width() // 2, self.height() // 2
+        painter.drawRoundedRect(cx - int(w/2), cy - int(h/2), int(w), int(h), r, r)

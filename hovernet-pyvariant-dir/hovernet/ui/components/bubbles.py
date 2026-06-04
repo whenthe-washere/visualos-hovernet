@@ -110,10 +110,10 @@ class DownloadBubble(QWidget):
 
     def _reposition(self):
         if not self._anchor: return
-        global_pos = self._anchor.mapToGlobal(QPoint(self._anchor.width() // 2, self._anchor.height()))
+        global_pos = self._anchor.mapToGlobal(QPoint(self._anchor.width() // 2, 0))
         self.adjustSize()
         x = global_pos.x() - self.width() // 2
-        y = global_pos.y() + 6
+        y = global_pos.y() - self.height() - 6
         self.move(x, y)
 
     def set_anchor(self, widget):
@@ -170,10 +170,10 @@ class UpdateBubble(QWidget):
 
     def reposition(self):
         if not self._anchor: return
-        global_pos = self._anchor.mapToGlobal(QPoint(self._anchor.width() // 2, self._anchor.height()))
+        global_pos = self._anchor.mapToGlobal(QPoint(self._anchor.width() // 2, 0))
         self.adjustSize()
         x = global_pos.x() - self.width() // 2
-        y = global_pos.y() + 6
+        y = global_pos.y() - self.height() - 6
         self.move(x, y)
 
     def paintEvent(self, event):
@@ -239,10 +239,10 @@ class PrintyBubble(QWidget):
 
     def reposition(self):
         if not self._anchor: return
-        global_pos = self._anchor.mapToGlobal(QPoint(self._anchor.width() // 2, self._anchor.height()))
+        global_pos = self._anchor.mapToGlobal(QPoint(self._anchor.width() // 2, 0))
         self.adjustSize()
         x = global_pos.x() - self.width() // 2
-        y = global_pos.y() + 6
+        y = global_pos.y() - self.height() - 6
         self.move(x, y)
 
     def paintEvent(self, event):

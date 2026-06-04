@@ -196,10 +196,11 @@ class SettingsView(QWidget):
         sw_ws.toggled.connect(self.main_window.set_ws_btn_visible)
         cl.addWidget(SettingsRow("Show WS Button", "Display the WS/whenthe's space redirect button in the navigation toolbar.", sw_ws))
         
-        sw_expand = SettingsToggle()
-        sw_expand.setChecked(self.main_window.use_expandable_title)
-        sw_expand.toggled.connect(self.main_window.set_expandable_title_enabled)
-        cl.addWidget(SettingsRow("Expandable Title", "Show the full app name when hovering over the top-left title.", sw_expand))
+        # Currently bugged, will fix on the next bugfix/hotfix
+        # sw_expand = SettingsToggle()
+        # sw_expand.setChecked(self.main_window.use_expandable_title)
+        # sw_expand.toggled.connect(self.main_window.set_expandable_title_enabled)
+        # cl.addWidget(SettingsRow("Expandable Title", "Show the full app name when hovering over the top-left title.", sw_expand))
         
         l_app.addWidget(card)
         self.content_stack.addWidget(pg_app)
@@ -273,19 +274,18 @@ class SettingsView(QWidget):
         cl.addWidget(QLabel(f"App Version: {getattr(self.main_window, 'HOVERNET_VERSION', '2.2')}-py"))
         cl.addWidget(QLabel("visualOS HoverNet by whenthe's space."))
         
-        notes = QLabel("What changed (compared to v2.1):\n\n"
-                      "• Settings is now a webpage\n"
-                      "• Improved the overall design of the app(Specifically context menus and the URL bar)\n"
-                      "• Added window snapping and resizing\n"
-                      "• Bubble notifications follow the window instead of staying in one place now\n"
-                      "• Added drag zone to the top side of the window(activates on hover)\n"
-                      "• Added smart highlighting on websites\n"
-                      "• Fixed redirects not opening new tabs\n"
-                      "• Expandable title bar is now optional(When disabled, only shows HoverNet)\n"
-                      "• The app has moved from PyQt6 entirely and now uses PySide6\n"
-                      "• Updated the version in the app's code\n"
-                      "• Added graphical icons for New Tab and title buttons\n"
-                      "• Set the custom title bar as default")
+        notes = QLabel("What changed (compared to v2.2):\n\n"
+                      "• Improved the overall design to match the minimal standards for the visualOS 30O1 design language, these include changes such as:\n"
+                      "• • Changed title buttons to use visualOS 30O1's Linear style\n"
+                      "• • Moved the toolbar to the bottom\n"
+                      "• • Made the toolbar an island\n"
+                      "• Added icons for Home, WS, Printy and Tools\n"
+                      "• Added Windows-native dragging and Aero snapping using ctypes\n"
+                      "• Made the toolbar semi-transparent\n"
+                      "• Tweaked backgrounds for tabs(Inactive, Active, Hover)\n"
+                      "• Added animations for some toolbar icons and toolbar fade in + out\n"
+                      "• Updated the app's icon\n"
+                      "N The custom title bar is now considered finished, and is likely to recieve any revamps.\nThis means that in the next few versions, the option to opt out from the custom title bar is likely to be removed")
         notes.setObjectName("relNotes")
         notes.setWordWrap(True)
         cl.addWidget(notes)

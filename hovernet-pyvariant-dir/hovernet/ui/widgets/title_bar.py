@@ -28,7 +28,8 @@ class ExpandableAppTitle(QLabel):
         """)
         
         # Animation and timer setup
-        self.setFixedWidth(60)  # Start with short width
+        self.setMinimumWidth(60)  # Start with short width
+        self.setMaximumWidth(60)
         self.target_width = 60
         self.is_expanded = False
         self.hover_timer = QTimer()
@@ -40,7 +41,7 @@ class ExpandableAppTitle(QLabel):
         self.leave_timer.timeout.connect(self.contract_title)
         
         # Animation
-        self.animation = QPropertyAnimation(self, b"minimumWidth")
+        self.animation = QPropertyAnimation(self, b"maximumWidth")
         self.animation.setDuration(200)
         self.animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         
@@ -62,6 +63,7 @@ class ExpandableAppTitle(QLabel):
         if not self.is_expanded:
             self.is_expanded = True
             self.setText(self.full_text)
+            self.setMinimumWidth(60)
             self.animation.setStartValue(60)
             self.animation.setEndValue(180)
             self.animation.start()
@@ -69,6 +71,7 @@ class ExpandableAppTitle(QLabel):
     def contract_title(self):
         if self.is_expanded:
             self.is_expanded = False
+            self.setMinimumWidth(60)
             self.setText(self.short_text)
             self.animation.setStartValue(180)
             self.animation.setEndValue(60)

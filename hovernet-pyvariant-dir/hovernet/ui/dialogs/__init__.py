@@ -1,1 +1,1 @@
-# Dialogs and modals
+# Dialogs

@@ -50,11 +50,17 @@ class AnimatedIconButton(QToolButton):
         # Center the icon (assume 16x16 icon area)
         painter.translate((w - 16) / 2, (h - 16) / 2)
         
-        base_color = QColor(255, 255, 255)
+        main_win = self.window()
+        is_dark = getattr(main_win, 'is_dark_mode', True)
+        base_color = QColor(255, 255, 255) if is_dark else QColor(50, 50, 60)
+        
+        accent_rgb = (85, 142, 255)
+        if hasattr(main_win, 'get_accent_rgb'):
+            accent_rgb = main_win.get_accent_rgb()
+        primary_accent = QColor(*accent_rgb)
         
         if self.icon_type == 'home':
-            target_color = QColor("#0050FF")
-            color = interpolate_color(base_color, target_color, self.hover_progress)
+            color = interpolate_color(base_color, primary_accent, self.hover_progress)
             pen = QPen(color, 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
             painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -145,8 +151,7 @@ class AnimatedIconButton(QToolButton):
             painter.drawPath(tri_path)
 
         elif self.icon_type == 'tools':
-            target_color = QColor("#1976D2")
-            color = interpolate_color(base_color, target_color, self.hover_progress)
+            color = interpolate_color(base_color, primary_accent, self.hover_progress)
             
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(QBrush(color))
@@ -155,3 +160,75 @@ class AnimatedIconButton(QToolButton):
             painter.drawEllipse(2, 6, 3, 3)
             painter.drawEllipse(6.5, 6, 3, 3)
             painter.drawEllipse(11, 6, 3, 3)
+
+        elif self.icon_type == 'back':
+            color = interpolate_color(base_color, primary_accent, self.hover_progress)
+            
+            # If disabled, draw grayed out
+            if not self.isEnabled():
+                color = QColor("#445066") if is_dark else QColor("#a0a0b0")
+                
+            pen = QPen(color, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            
+            path = QPainterPath()
+            path.moveTo(14, 8)
+            path.lineTo(2, 8)
+            path.moveTo(6, 4)
+            path.lineTo(2, 8)
+            path.lineTo(6, 12)
+            painter.drawPath(path)
+
+        elif self.icon_type == 'forward':
+            color = interpolate_color(base_color, primary_accent, self.hover_progress)
+            
+            if not self.isEnabled():
+                color = QColor("#445066") if is_dark else QColor("#a0a0b0")
+                
+            pen = QPen(color, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            
+            path = QPainterPath()
+            path.moveTo(2, 8)
+            path.lineTo(14, 8)
+            path.moveTo(10, 4)
+            path.lineTo(14, 8)
+            path.lineTo(10, 12)
+            painter.drawPath(path)
+
+        elif self.icon_type == 'refresh':
+            color = interpolate_color(base_color, primary_accent, self.hover_progress)
+            
+            pen = QPen(color, 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            
+            # Circle with a gap
+            painter.drawArc(3, 3, 10, 10, 45 * 16, 270 * 16)
+            
+            # Arrow head
+            path = QPainterPath()
+            path.moveTo(12, 1)
+            path.lineTo(12, 6)
+            path.lineTo(7, 6)
+            painter.drawPath(path)
+
+        elif self.icon_type == 'site_info':
+            color = interpolate_color(base_color, primary_accent, self.hover_progress)
+            
+            pen = QPen(color, 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            painter.setBrush(Qt.BrushStyle.NoBrush)
+            
+            # Shield or lock icon
+            # Let's draw a lock
+            path = QPainterPath()
+            path.moveTo(5, 7)
+            path.lineTo(5, 5)
+            path.arcTo(4, 2, 8, 8, 180, -180) # lock hoop
+            painter.drawPath(path)
+            
+            painter.setBrush(color)
+            painter.drawRoundedRect(3, 7, 10, 7, 2, 2)

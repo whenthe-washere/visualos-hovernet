@@ -14,6 +14,8 @@ def normalize_input(text):
     # Internal browser URIs — never search these
     if text == "hovernet:settings":
         return "hovernet://settings"
+    if text == "hovernet:history":
+        return "hovernet://history"
     if text.startswith(("about:", "chrome:", "edge:", "data:", "hovernet:")):
         return text
 

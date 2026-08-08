@@ -12,21 +12,35 @@ class AutocompleteDropdown(QListWidget):
         self.setWindowFlags(Qt.WindowType.ToolTip | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
 
-        self.setStyleSheet("""
-            QListWidget {
-                background: #1a1a3a;
-                border: 1px solid #333366;
-                border-radius: 6px;
-                color: #ddddff;
-                font-size: 12px;
-                outline: none;
-            }
-            QListWidget::item { padding: 5px 10px; border: none; }
-            QListWidget::item:selected { background: #2e2e60; color: #ffffff; }
-            QListWidget::item:hover { background: #252550; }
-        """)
+
         self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.itemClicked.connect(self._on_item_clicked)
+        self.update_style()
+
+    def update_style(self):
+        win = self.parent_window
+        r, g, b = (85, 142, 255)
+        if win and hasattr(win, 'get_accent_rgb'):
+            r, g, b = win.get_accent_rgb()
+        is_dark = getattr(win, 'is_dark_mode', True) if win else True
+        bg = f"rgba({max(r//5,10)},{max(g//5,10)},{max(b//5,10)},240)" if is_dark else "rgba(255,255,255,250)"
+        border = f"rgba({r//2},{g//2},{b//2},180)"
+        text = "#DEE9FF" if is_dark else "#111122"
+        sel = f"rgba({r},{g},{b},80)" if is_dark else f"rgba({r},{g},{b},40)"
+        hover = f"rgba({r//3},{g//3},{b//3},180)" if is_dark else f"rgba({r},{g},{b},20)"
+        self.setStyleSheet(f"""
+            QListWidget {{
+                background: {bg};
+                border: 1px solid {border};
+                border-radius: 6px;
+                color: {text};
+                font-size: 12px;
+                outline: none;
+            }}
+            QListWidget::item {{ padding: 5px 10px; border: none; }}
+            QListWidget::item:selected {{ background: {sel}; color: {"#ffffff" if is_dark else "#000000"}; }}
+            QListWidget::item:hover {{ background: {hover}; }}
+        """)
 
         self._nam = QNetworkAccessManager(self)
         self._debounce = QTimer(self)

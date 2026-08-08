@@ -1,5 +1,5 @@
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtWidgets import QLineEdit, QStyle, QStyleOptionFrame
+from PySide6.QtWidgets import QLineEdit, QStyle, QStyleOptionFrame, QHBoxLayout, QLabel
 from PySide6.QtGui import QColor, QPainter
 
 class UrlLineEdit(QLineEdit):
@@ -9,51 +9,72 @@ class UrlLineEdit(QLineEdit):
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._gray_color = QColor("#8888aa")
-        self._white_color = QColor("#ffffff")
+        self.setMinimumHeight(28)
         
-        # Modern URL bar style
+        # Internal layout for zoom indicator
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 12, 0) # Right padding inside URL bar
+        self._layout.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        
+        self.zoom_indicator = QLabel("100%", self)
+        self.zoom_indicator.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.zoom_indicator.setStyleSheet("color: #8994AB; font-size: 11px; font-weight: 600; background: transparent;")
+        self.zoom_indicator.hide() # Hidden initially, shown if zoom != 100 or always shown depending on preference, but we'll show it always for now.
+        self.zoom_indicator.show()
+        
+        self._layout.addWidget(self.zoom_indicator)
+        
+        # Minimal default style — will be fully overridden by setup_island_layout()
         self.setStyleSheet("""
             QLineEdit {
-                background-color: rgba(30, 30, 60, 160);
-                border: 2px solid #333366;
+                background-color: rgba(30, 40, 60, 160);
+                border: 2px solid #334466;
                 border-radius: 14px;
-                padding: 4px 12px;
+                padding: 4px 70px 4px 12px; /* right padding for zoom indicator */
                 color: #ffffff;
                 font-size: 13px;
-                selection-background-color: #5566ff;
+                selection-background-color: rgba(85, 142, 255, 180);
             }
             QLineEdit:focus {
-                border: 2px solid #5566ff;
+                border: 2px solid rgba(85, 142, 255, 200);
                 background-color: rgba(40, 40, 80, 200);
             }
         """)
+        self.style().unpolish(self)
+        self.style().polish(self)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def paintEvent(self, event):
-        # When focused or selecting text, draw normally to show cursor/selection
-        if self.hasFocus() or self.hasSelectedText():
-            super().paintEvent(event)
-            return
+        # Draw the standard QLineEdit (which perfectly handles the stylesheet border-radius and background).
+        # When unfocused, the text color is transparent via stylesheet, so we can draw our custom text over it.
+        super().paintEvent(event)
 
-        # Initialize the style option to draw the background/border
+        if self.hasFocus() or self.hasSelectedText():
+            return
+            
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         option = QStyleOptionFrame()
         self.initStyleOption(option)
         
-        # Draw the widget background and border using the current style
-        self.style().drawPrimitive(QStyle.PrimitiveElement.PE_PanelLineEdit, option, painter, self)
-
-        # Get the area where text is actually drawn
         rect = self.style().subElementRect(QStyle.SubElement.SE_LineEditContents, option, self)
         rect.adjust(2, 0, -2, 0) # slight horizontal padding
         
         text = self.text()
+        
+        main_win = self.window()
+        is_dark = getattr(main_win, 'is_dark_mode', True)
+        gray_color = QColor("#8994AB") if is_dark else QColor("#555566")
+        main_color = QColor("#ffffff") if is_dark else QColor("#000000")
+        
         if not text:
-            # Handle placeholder text if empty
             if self.placeholderText():
-                painter.setPen(QColor(100, 100, 140))
+                painter.setPen(gray_color)
                 painter.drawText(rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.placeholderText())
             return
 
@@ -78,22 +99,23 @@ class UrlLineEdit(QLineEdit):
 
         # Start drawing from the left
         metrics = painter.fontMetrics()
-        x = rect.x()
         y = (self.height() + metrics.ascent() - metrics.descent()) // 2
 
-        # Protocol (gray)
-        if prefix:
-            painter.setPen(self._gray_color)
-            painter.drawText(x, y, prefix)
-            x += metrics.horizontalAdvance(prefix)
+        def draw_segment(x, text, color):
+            painter.setPen(color)
+            avail = rect.right() - x
+            if avail <= 0:
+                return None
+            if metrics.horizontalAdvance(text) <= avail:
+                painter.drawText(x, y, text)
+                return x + metrics.horizontalAdvance(text)
+            painter.drawText(x, y, metrics.elidedText(text, Qt.TextElideMode.ElideRight, avail))
+            return None
 
-        # Domain (white)
-        painter.setPen(self._white_color)
-        painter.drawText(x, y, domain)
-        x += metrics.horizontalAdvance(domain)
-
-        # Path/Query (gray)
-        if suffix:
-            painter.setPen(self._gray_color)
-            # Use eliding if text is too long for the box
-            painter.drawText(x, y, suffix)
+        x = draw_segment(rect.x(), prefix, gray_color)
+        if x is None:
+            return
+        x = draw_segment(x, domain, main_color)
+        if x is None:
+            return
+        draw_segment(x, suffix, gray_color)

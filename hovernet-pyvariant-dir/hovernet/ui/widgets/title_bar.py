@@ -28,8 +28,8 @@ class ExpandableAppTitle(QLabel):
         """)
         
         # Animation and timer setup
-        self.setMinimumWidth(60)  # Start with short width
-        self.setMaximumWidth(60)
+        self.setMinimumWidth(60)
+        self.setMaximumWidth(300)
         self.target_width = 60
         self.is_expanded = False
         self.hover_timer = QTimer()
@@ -41,7 +41,7 @@ class ExpandableAppTitle(QLabel):
         self.leave_timer.timeout.connect(self.contract_title)
         
         # Animation
-        self.animation = QPropertyAnimation(self, b"maximumWidth")
+        self.animation = QPropertyAnimation(self, b"minimumWidth")
         self.animation.setDuration(200)
         self.animation.setEasingCurve(QEasingCurve.Type.OutCubic)
         
@@ -63,17 +63,15 @@ class ExpandableAppTitle(QLabel):
         if not self.is_expanded:
             self.is_expanded = True
             self.setText(self.full_text)
-            self.setMinimumWidth(60)
             self.animation.setStartValue(60)
-            self.animation.setEndValue(180)
+            self.animation.setEndValue(240)
             self.animation.start()
     
     def contract_title(self):
         if self.is_expanded:
             self.is_expanded = False
-            self.setMinimumWidth(60)
             self.setText(self.short_text)
-            self.animation.setStartValue(180)
+            self.animation.setStartValue(self.width())
             self.animation.setEndValue(60)
             self.animation.start()
 
@@ -90,8 +88,8 @@ class DragHandleLine(QFrame):
         
         # Inner line widget for cleaner animation
         self.line = QFrame(self)
-        # Position at the center with 0 width initially
-        self.line.setStyleSheet("background-color: #5566ff; border-radius: 1px;")
+        # Position at the center with 0 width initially - color set dynamically
+        self.line.setStyleSheet("background-color: #558EFF; border-radius: 1px;")
         
         self._hover_timer = QTimer(self)
         self._hover_timer.setSingleShot(True)
@@ -126,6 +124,13 @@ class DragHandleLine(QFrame):
     def _expand(self):
         if not self._expanded:
             self._expanded = True
+            # Update color dynamically from window
+            win = self.window()
+            if win and hasattr(win, 'get_accent_color_hex'):
+                color = win.get_accent_color_hex()
+            else:
+                color = "#558EFF"
+            self.line.setStyleSheet(f"background-color: {color}; border-radius: 1px;")
             self._anim.stop()
             self._anim.setStartValue(self.line.geometry())
             self._anim.setEndValue(QRect(20, 1, self.width() - 40, 2))

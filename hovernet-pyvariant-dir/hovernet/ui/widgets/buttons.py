@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect, Property
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, QRect, QRectF, QVariantAnimation, Property
 from PySide6.QtWidgets import QToolButton, QCheckBox, QPushButton
 from PySide6.QtGui import QColor, QPainter, QPen, QBrush
 
@@ -10,6 +10,10 @@ class NewTabButton(QToolButton):
         self.setFixedWidth(28)
         self._collapsed_width = 28
         self._expanded_width = 100
+        self._compact_mode = False
+        
+        self.setMouseTracking(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         
         self._hover_timer = QTimer(self)
         self._hover_timer.setSingleShot(True)
@@ -28,8 +32,29 @@ class NewTabButton(QToolButton):
         self._anim_max.setEasingCurve(QEasingCurve.Type.OutCubic)
 
         self._expanded = False
-        self.setMouseTracking(True)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._expanded = False
+
+    @property
+    def compact_mode(self):
+        return getattr(self, '_compact_mode', False)
+
+    @compact_mode.setter
+    def compact_mode(self, value):
+        self._compact_mode = value
+        if value:
+            self._collapsed_width = 24
+            self._expanded_width = 24
+            self.setMinimumWidth(24)
+            self.setMaximumWidth(24)
+            self.setFixedHeight(24)
+        else:
+            self._collapsed_width = 28
+            self._expanded_width = 100
+            self.setMinimumWidth(28)
+            self.setMaximumWidth(9999)
+            self.setFixedHeight(26)
+        self.updateGeometry()
+        self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -43,24 +68,37 @@ class NewTabButton(QToolButton):
         if is_hover: bg_alpha = 60
         if is_pressed: bg_alpha = 100
         
-        bg_color = QColor(85, 102, 255, bg_alpha)
-        border_color = QColor("#5566ff") if is_hover else QColor("#4a4a80")
-        icon_color = QColor("#ffffff") if is_hover else QColor("#aaaacc")
+        accent_color = QColor("#558EFF")
+        main_win = self.window()
+        is_dark = getattr(main_win, 'is_dark_mode', True) if main_win else True
+        if main_win and hasattr(main_win, 'get_accent_rgb'):
+            accent_color = QColor(*main_win.get_accent_rgb())
+            
+        bg_color = QColor(accent_color.red(), accent_color.green(), accent_color.blue(), bg_alpha)
+        r2, g2, b2 = accent_color.red(), accent_color.green(), accent_color.blue()
+        border_color = accent_color if is_hover else (QColor(max(r2//3, 14), max(g2//3, 14), max(b2//3, 14)) if is_dark else QColor("#d0d0e0"))
+        
+        # When hovered in light mode, if the accent color is dark enough, white is fine. Otherwise, black.
+        # But generally, white text on primary accent is standard, so we'll just keep white on hover.
+        icon_color = QColor("#ffffff") if is_hover else (QColor("#A9B5CC") if is_dark else QColor("#555566"))
         
         # Background
         painter.setBrush(bg_color)
         painter.setPen(QPen(border_color, 2))
         painter.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1), 13, 13)
         
-        # Graphical + Icon
+        # Graphical + Icon: pinned to the collapsed-width center so it reads
+        # left-aligned while the capsule expands, and back to centered when it
+        # shrinks back down.
         painter.setPen(QPen(icon_color, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        cx, cy = 14, 13
+        cx = min(self.width() // 2, self._collapsed_width // 2)
+        cy = 13
         s = 5
         painter.drawLine(cx - s, cy, cx + s, cy)
         painter.drawLine(cx, cy - s, cx, cy + s)
         
-        # Text fade in based on width
-        if self.width() > 35:
+        # Text fade in based on width (only in standard mode)
+        if not self.compact_mode and self.width() > 35:
             progress = (self.width() - self._collapsed_width) / (self._expanded_width - self._collapsed_width)
             alpha = int(max(0, min(255, progress * 255)))
             
@@ -79,11 +117,15 @@ class NewTabButton(QToolButton):
 
     def enterEvent(self, event):
         super().enterEvent(event)
+        if self.compact_mode:
+            return
         self._leave_timer.stop()
         self._hover_timer.start(200)
 
     def leaveEvent(self, event):
         super().leaveEvent(event)
+        if self.compact_mode:
+            return
         self._hover_timer.stop()
         if self._expanded:
             self._leave_timer.start(200)
@@ -105,6 +147,8 @@ class NewTabButton(QToolButton):
                 anim.start()
 
     def trigger_animation(self):
+        if self.compact_mode:
+            return
         if not self._expanded:
             self._expand()
             QTimer.singleShot(1200, lambda: self._collapse() if not self.underMouse() else None)
@@ -138,9 +182,16 @@ class SettingsToggle(QCheckBox):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         is_on = self.isChecked()
         
-        track_color = QColor("#5566ff") if is_on else QColor("#2a2a4a")
+        main_win = self.window()
+        is_dark = getattr(main_win, 'is_dark_mode', True) if main_win else True
+        accent_rgb = getattr(main_win, 'get_accent_rgb', lambda: (85, 142, 255))()
+        
+        r, g, b = accent_rgb
+        dr, dg, db = max(r//4, 14), max(g//4, 14), max(b//4, 14)
+        
+        track_color = QColor(*accent_rgb) if is_on else (QColor(dr, dg, db) if is_dark else QColor("#e0e0e0"))
         if not self.isEnabled():
-            track_color = QColor("#1a1a3a")
+            track_color = QColor(max(dr-4, 4), max(dg-4, 4), max(db-4, 4)) if is_dark else QColor("#cccccc")
             
         painter.setBrush(track_color)
         painter.setPen(Qt.PenStyle.NoPen)
@@ -156,9 +207,32 @@ class TitleBarButton(QPushButton):
         self.btn_type = btn_type # 'min', 'max', 'close'
         self.setFixedSize(36, 26)
         self._is_maximized = False # Only used for 'max' type
+        self._anim = 0.0          # 0 = resting, 1 = hovered
+        self._animator = QVariantAnimation(self)
+        self._animator.setDuration(160)
+        self._animator.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._animator.valueChanged.connect(self._on_anim_value)
         self.setStyleSheet("background: transparent; border: none;") # Reset base style
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        
+
+    def _on_anim_value(self, val):
+        self._anim = float(val)
+        self.update()
+
+    def enterEvent(self, event):
+        self._animator.stop()
+        self._animator.setStartValue(self._anim)
+        self._animator.setEndValue(1.0)
+        self._animator.start()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._animator.stop()
+        self._animator.setStartValue(self._anim)
+        self._animator.setEndValue(0.0)
+        self._animator.start()
+        super().leaveEvent(event)
+
     def set_maximized(self, is_max):
         self._is_maximized = is_max
         self.update()
@@ -166,28 +240,27 @@ class TitleBarButton(QPushButton):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        is_hover = self.underMouse()
-        
+
         if self.btn_type == 'min':
             base_color = QColor("#EAB308")
         elif self.btn_type == 'max':
             base_color = QColor("#22C55E")
         else:
             base_color = QColor("#EF4444")
-            
-        if is_hover:
-            base_color.setAlphaF(1.0)
-            w, h, r = 24, 3, 1.5
-        else:
-            # Less saturated + half transparent
-            hue, sat, val, _ = base_color.getHsv()
-            base_color.setHsv(hue, max(0, sat - 100), val)
-            base_color.setAlphaF(0.7)
-            w, h, r = 18, 2, 1.0
-            
+
+        # Crossfade resting -> hovered appearance (t = _anim)
+        t = self._anim
+        hue, sat, val, _ = base_color.getHsv()
+        resting_sat = max(0, sat - 100)
+        base_color.setHsv(hue, int(resting_sat + (sat - resting_sat) * t), val)
+        base_color.setAlphaF(0.7 + 0.3 * t)
+
+        w = 18 + 6 * t
+        h = 2 + 1 * t
+        r = 1.0 + 0.5 * t
+
         painter.setBrush(base_color)
         painter.setPen(Qt.PenStyle.NoPen)
-        
-        cx, cy = self.width() // 2, self.height() // 2
-        painter.drawRoundedRect(cx - int(w/2), cy - int(h/2), int(w), int(h), r, r)
+
+        cx, cy = self.width() / 2, self.height() / 2
+        painter.drawRoundedRect(QRectF(cx - w/2, cy - h/2, w, h), r, r)

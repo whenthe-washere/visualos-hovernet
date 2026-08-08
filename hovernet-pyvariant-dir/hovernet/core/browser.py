@@ -10,8 +10,9 @@ class BrowserView(QWebEngineView):
         # store current load progress for the URL-bar background when switching tabs
         self._load_progress = -1
 
-        # Match the app's dark background so blank/loading pages aren't a white void
-        self.page().setBackgroundColor(QColor("#1E1E3C"))
+        # Match the app's dark background so blank/loading pages aren't a white void.
+        # Use neutral dark; will be updated when the window's theme is applied.
+        self.page().setBackgroundColor(QColor(10, 10, 16))
         # Inject lightweight polyfills
         try:
             profile = self.page().profile()
@@ -46,3 +47,28 @@ class BrowserView(QWebEngineView):
         if main_win and hasattr(main_win, 'add_tab'):
             return main_win.add_tab(None)
         return super().createWindow(type)
+
+    def wheelEvent(self, event):
+        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            angle_delta = event.angleDelta().y()
+            if angle_delta != 0:
+                factor = 1.1 if angle_delta > 0 else (1 / 1.1)
+                main_win = self.window()
+                if main_win and hasattr(main_win, '_zoom'):
+                    main_win._zoom(factor)
+                return
+        super().wheelEvent(event)
+
+    def event(self, e):
+        from PySide6.QtCore import QEvent
+        if e.type() == QEvent.Type.NativeGesture:
+            if e.gestureType() == Qt.NativeGestureType.ZoomNativeGesture:
+                val = e.value()
+                # value() is the magnification delta, e.g. 0.01 for small zoom in
+                factor = 1.0 + val
+                main_win = self.window()
+                if main_win and hasattr(main_win, '_zoom'):
+                    main_win._zoom(factor)
+                return True
+        return super().event(e)
+
